@@ -1,0 +1,39 @@
+{
+    "sudo": "",
+    "vpnUser": "staff",
+    "vpnPwd": "",
+    "vpnServer": "1.2.3.4",
+    "sshServer": "10.0.0.1",
+    "sshUser": "ubuntu",
+    "sshKey": "./expectedKey.pem",
+    "keyPassphrase": "",
+    "rdpServer": "10.0.0.2",
+    "rdpUser": "Administrator",
+    "rdpPwd": "CloudComputing",
+    "server": {
+        "port": 3001
+    },
+    "points": {
+        "base": 60,
+        "downloadOvpn": 10,
+        "connectOvpn": {
+            "OK": 8,
+            "AUTH_ERROR": 4
+        },
+        "connectSsh": {
+            "OK": 11,
+            "AUTH_ERROR": 5
+        },
+        "connectRdp": {
+            "OK": 11,
+            "AUTH_ERROR": 5
+        }
+    },
+    "statsFile": "stats.json",
+    "timeouts": {
+        "ovpnDownload": 7000,
+        "ovpnConnect": 8000,
+        "sshTimeout": 7000,
+        "rdpTimeout": 5000
+    }
+}

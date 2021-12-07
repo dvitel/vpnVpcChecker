@@ -1,0 +1,11 @@
+[Unit]
+Description=USF VPN-VPC tester
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/vpn-vpc
+ExecStart=node index.js --server
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
