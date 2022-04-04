@@ -292,10 +292,11 @@ const testBastionNetConfig = async (conn, log, logError) => {
                 // log(buffer);
                 var foundLine = analyzeIp(buffer, /172\.16\.8\.\d+\/(?<mask>\d+)/, "26");
                 if (foundLine) {
-                    log("Bastion net config: " + foundLine);
+                    foundLine = foundLine.split(" ").filter(x => x != "").join(" ");
+                    log("Bastion net: " + foundLine);
                     res = foundLine;
                 } else {
-                    log("Bastion net config: cannot find expected network configuration. Check assignment requirements.");
+                    log("Bastion net: cannot find expected network configuration. Check assignment requirements.");
                     log(buffer);
                 }
                 ipCmdResolve();
@@ -333,10 +334,11 @@ const testPrivateUbuntuNetConfig = async (conn, sshServer, log, logError) => {
                 } else {
                     var foundLine = analyzeIp(buffer, /172\.16\.1[01]\.\d+\/(?<mask>\d+)/, "23");
                     if (foundLine) {
-                        log("Private Ubuntu net config: " + foundLine);
+                        foundLine = foundLine.split(" ").filter(x => x != "").join(" ");
+                        log("Private Ubuntu net: " + foundLine);
                         res = IP_OK
                     } else {
-                        log("Private Ubuntu net config: cannot find expected network configuration. Check assignment requirements.");
+                        log("Private Ubuntu net: cannot find expected network configuration. Check assignment requirements.");
                         log(buffer);
                         res = OK
                     }

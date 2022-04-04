@@ -1,0 +1,11 @@
+[Unit]
+Description=VPC service
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/vpc
+ExecStart=node index.js --server
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

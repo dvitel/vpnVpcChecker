@@ -58,3 +58,5 @@ All attempts are logged into stats.json (or file specified in config.json). This
 ## VPC assignment (NOTES from 04/04/22)
 
 Add staff key into [permanent ssh config](https://stackoverflow.com/questions/3466626/how-to-permanently-add-a-private-key-with-ssh-add-on-ubuntu): ~/.ssh/config. Modify assignment to  ask students to add testing server to security group.
+
+Add [ssh-agent deamon as systemctl service](https://gist.github.com/magnetikonline/b6255da90606fe9c5c25d3333c98c90d)
