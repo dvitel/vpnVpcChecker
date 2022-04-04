@@ -54,3 +54,7 @@ Student,ID,Login
 Content of students.csv could be taken from canvas. This file plays role of authorisation database to run checks. TAs could add separate records for them to check tester setup.
 
 All attempts are logged into stats.json (or file specified in config.json). This file could be used at the end to get bests scores of students. 
+
+## VPC assignment (NOTES from 04/04/22)
+
+Add staff key into [permanent ssh config](https://stackoverflow.com/questions/3466626/how-to-permanently-add-a-private-key-with-ssh-add-on-ubuntu): ~/.ssh/config. Modify assignment to  ask students to add testing server to security group.

@@ -1,4 +1,4 @@
-const { testAll } = require("./protocols")
+const { testVpnVpc, testVpc } = require("./protocols")
 const express = require("express")
 const config = require("./config.json")
 const { parse } = require("csv-parse/sync")
@@ -13,14 +13,24 @@ let students = parse(fs.readFileSync("students.csv"), {
     columns: true, skip_empty_lines: true
 })
 
-let stats = {} //object with all student runs in memory 
-try {
-    stats = JSON.parse(fs.readFileSync(config.statsFile))
-} catch (e) {
-    stats = {}
-} 
+
+function loadStats(statsFile) {
+    let stats = {} //object with all student runs in memory 
+    try {
+        stats = JSON.parse(fs.readFileSync(statsFile))
+    } catch (e) {
+        console.error(`Cannot read file ${statsFile}`, e);
+        stats = {}
+    } 
+    return stats;
+}
+
+let vpcStats = loadStats(config.vpcStatsFile);
+let vpnVpcStats = loadStats(config.vpnVpcStatsFile);
+let sshKey = fs.readFileSync(config.sshKey);
 
 let isServerMode = process.argv.includes("--server")
+let isVpc = process.argv.includes("--vpc")
 
 if (isServerMode) {
 
@@ -32,6 +42,49 @@ if (isServerMode) {
     // app.get("/", (req, res) => {
     //     res.send("Infrastructure testing server " + package.version);
     // })
+
+    app.post("/vpc", async (req, res) => {        
+        if (localSection.releasePromises.length >= 20) { //server is busy 
+            res.statusCode = 429;
+            res.send({"error": "Server is busy. Try again later"});
+            return;
+        }
+        let { login = "", bastionServer = "", sshServer = "" } = req.body || {};
+        let validation = { login: null, bastionServer: null, sshServer: null, rdpServer: null }
+        if (!ipPattern.test(bastionServer)) validation.bastionServer = "VPN server is not valid IP address";
+        if (!ipPattern.test(sshServer)) validation.sshServer = "SSH server is not valid IP address";
+        let student = students.find(s => s.Login == login);
+        if (!student) validation.login = "Specified login is incorrect";        
+        if (Object.keys(validation).some(prop => validation[prop])) {
+            res.status(400);
+            res.send({fields: validation, error: "Some fields are incorrect"});
+        } else {
+            // let uNumber = student.ID;
+            // if (uNumber.startsWith("U")) uNumber = uNumber.substring(1);
+            let result = await testVpc({id:login, bastionServer, sshServer, sshKey });
+            await criticalSection(async () => {                
+                let timestamp = new Date();
+                if (!vpcStats[student.Login]) vpcStats[student.Login] = { name: student.Student, uid: student.ID };
+                let record = vpcStats[student.Login]
+                record.lastScore = result.score; 
+                record.lastScoreTimestamp = timestamp;
+                if (!record.bestScore) {
+                    record.bestScore = result.score; 
+                    record.bestScoreTimestamp = timestamp;
+                }
+                else if (record.bestScore < result.score) record.bestScore = result.score;
+                if (!record.logs) record.logs = []
+                record.logs.push({ score: result.score, timestamp, log: result.log } );
+                let writeResolved = null;
+                let writePromise = new Promise(res => writeResolved = res)
+                fs.writeFile(config.vpcStatsFile, JSON.stringify(vpcStats), () => {
+                    writeResolved();
+                }); //we do not await writing - potentially possible race conditions ?? - should not be
+                await writePromise;
+            }, localSection);
+            res.send(result);
+        }
+    })
 
     app.post("/vpn-vpc", async (req, res) => {        
         if (localSection.releasePromises.length >= 10) { //server is busy 
@@ -53,10 +106,10 @@ if (isServerMode) {
             let uNumber = student.ID;
             if (uNumber.startsWith("U")) uNumber = uNumber.substring(1);
             let result = await criticalSection(async () => {
-                let result = await testAll({id:uNumber, vpnServer, sshServer, rdpServer });
+                let result = await testVpnVpc({id:uNumber, vpnServer, sshServer, rdpServer, sshKey });
                 let timestamp = new Date();
-                if (!stats[student.Login]) stats[student.Login] = { name: student.Student, uid: student.ID };
-                let record = stats[student.Login]
+                if (!vpnVpcStats[student.Login]) vpnVpcStats[student.Login] = { name: student.Student, uid: student.ID };
+                let record = vpnVpcStats[student.Login]
                 record.lastScore = result.score; 
                 record.lastScoreTimestamp = timestamp;
                 if (!record.bestScore) {
@@ -68,7 +121,7 @@ if (isServerMode) {
                 record.logs.push({ score: result.score, timestamp, log: result.log } );
                 let writeResolved = null;
                 let writePromise = new Promise(res => writeResolved = res)
-                fs.writeFile(config.statsFile, JSON.stringify(stats), () => {
+                fs.writeFile(config.vpnVpcStatsFile, JSON.stringify(vpnVpcStats), () => {
                     writeResolved();
                 }); //we do not await writing - potentially possible race conditions ?? - should not be
                 await writePromise;
@@ -79,6 +132,8 @@ if (isServerMode) {
     })
     
     app.listen(config.server.port, () => console.log(`Server started at http://localhost:${config.server.port}`));        
+} else if (isVpc) {
+    testVpc({ sshKey }); //no await
 } else {
-    testAll({}); //no await
+    testVpnVpc({ sshKey });
 }

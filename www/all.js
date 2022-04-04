@@ -14,7 +14,7 @@ document.getElementById("testingForm").addEventListener("submit", async function
     document.getElementById("progress").classList.remove("d-none");
     document.getElementById("testAll").disabled = true;
     try {
-        let resp = await fetch("/vpn-vpc", {
+        let resp = await fetch(endpointUrl, {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json'

@@ -3,9 +3,11 @@
     "vpnUser": "staff",
     "vpnPwd": "",
     "vpnServer": "1.2.3.4",
-    "sshServer": "10.0.0.1",
+    "bastionServer": "3.91.66.0",
+    "bastionUser": "ec2-user",
+    "sshServer": "172.16.10.91",
     "sshUser": "ubuntu",
-    "sshKey": "./expectedKey.pem",
+    "sshKey": "./usf-demo.pem",
     "keyPassphrase": "",
     "rdpServer": "10.0.0.2",
     "rdpUser": "Administrator",
@@ -14,6 +16,19 @@
         "port": 3001
     },
     "points": {
+        "vpc": {
+            "base": 56,
+            "bastionConnect": {
+                "OK": 11,
+                "AUTH_ERROR": 5
+            },
+            "privateHost": {
+                "IP_OK": 22,
+                "OK": 11,
+                "AUTH_ERROR": 5
+            },
+            "bastionNetConfig": 11
+        },
         "base": 60,
         "downloadOvpn": 10,
         "connectOvpn": {
@@ -27,9 +42,13 @@
         "connectRdp": {
             "OK": 11,
             "AUTH_ERROR": 5
+        },
+        "netMask": {
+            "OK": 11
         }
     },
-    "statsFile": "stats.json",
+    "vpcStatsFile": "vpcStats.json",
+    "vpnVpcStatsFile": "vpnVpcStats.json",
     "timeouts": {
         "ovpnDownload": 7000,
         "ovpnConnect": 8000,
