@@ -5,6 +5,7 @@ const { parse } = require("csv-parse/sync")
 const fs = require("fs")
 const package = require("./package.json")
 const criticalSection = require("./criticalSection")
+const { exec } = require("child_process")
 
 let ipPattern = /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/;
 let localSection = new criticalSection.CriticalSection()
@@ -13,6 +14,7 @@ let students = parse(fs.readFileSync("students.csv"), {
     columns: true, skip_empty_lines: true
 })
 
+exec("ssh-add " + config.sshKey);
 
 function loadStats(statsFile) {
     let stats = {} //object with all student runs in memory 
