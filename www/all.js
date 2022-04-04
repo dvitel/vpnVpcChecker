@@ -24,7 +24,7 @@ document.getElementById("testingForm").addEventListener("submit", async function
         console.log("Resp: ", json);
         let { score, log, fields } = json;
         if (fields) {
-            Object.keys(fields).forEach(fieldId => {
+            Object.keys(fields).filter(fieldId => fields[fieldId]).forEach(fieldId => {
                 let fieldEl = document.getElementById(fieldId);
                 if (fieldEl) fieldEl.classList.add("is-invalid")
             });

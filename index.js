@@ -56,7 +56,7 @@ if (isServerMode) {
             return;
         }
         let { login = "", bastionServer = "", sshServer = "" } = req.body || {};
-        let validation = { login: null, bastionServer: null, sshServer: null, rdpServer: null }
+        let validation = { login: null, bastionServer: null, sshServer: null }
         if (!ipPattern.test(bastionServer)) validation.bastionServer = "VPN server is not valid IP address";
         if (!ipPattern.test(sshServer)) validation.sshServer = "SSH server is not valid IP address";
         let student = students.find(s => s.Login == login);
