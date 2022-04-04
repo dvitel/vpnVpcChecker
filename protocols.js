@@ -225,7 +225,7 @@ const withLog = async (action) => {
     }
     var res = await action(log, logError);
     res = res || {};
-    res.log = log; 
+    res.log = logL; 
     return res;
 }
 
