@@ -74,6 +74,7 @@ if (isServerMode) {
                 let record = vpcStats[student.Login]
                 record.lastScore = result.score; 
                 record.lastScoreTimestamp = timestamp;
+                if (!record.bastions) record.bastions = [];
                 if (!record.bastions.includes(bastionServer)) record.bastions.push(bastionServer);
                 if (!record.bestScore) {
                     record.bestScore = result.score; 
