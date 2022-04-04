@@ -109,7 +109,7 @@ const connectOvpn = async (ovpnConfig, vpnUser, vpnPwd, sudoPrefix, log, logErro
     return vpnStatus;
 }
 
-const connectSsh = async (sshServer, sshUser, sshKey, keyPassphrase, log, logError, cb = null) => {
+const connectSsh = async (config, log, logError, cb = null) => {
     //node ssh-add should be executed before this 
     const ssh = new Client();
 
@@ -117,28 +117,32 @@ const connectSsh = async (sshServer, sshUser, sshKey, keyPassphrase, log, logErr
     let sshPromise = new Promise((res) => sshResolve = res);
     ssh.once('ready', async () => {
         if (verbose) log("[ssh] ready");  
-        log("ssh: " + sshServer + " " + OK);       
-        await (cb || (async () => {}))(ssh); //allows to do exec or forwardOut
-        sshResolve(OK);
+        log("ssh: " + (config.host) + " " + OK);       
+        var res = await (cb || (async () => {}))(ssh); //allows to do exec or forwardOut
+        sshResolve(res || OK);
     })
     .once('error', (e) => {
         if (verbose) logError("[ssh] error" + e.toString());
         var status = e.message;
         if (e.message.includes("authentication methods failed")) status = AUTH_ERROR;
         else if (e.message.includes("Timed out")) status = TIMEOUT;
-        log("ssh: " + sshServer + " " + status);       
+        log("ssh: " + (config.host) + " " + status);       
         sshResolve(status); //All configured authentication methods failed //Timed out while waiting for handshake
     })
-    .connect({
-        host: sshServer,
-        port: 22,
-        username: sshUser,
-        privateKey: sshKey,
-        passphrase: keyPassphrase,
-        readyTimeout: config.timeouts.sshTimeout,
-        agent: process.env.SSH_AUTH_SOCK,
-        agentForward: true        
-    })
+    .connect(config);
+        
+    //     {
+    //     host: sshServer,
+    //     port: 22,
+    //     username: sshUser,
+    //     privateKey: sshKey,
+    //     passphrase: keyPassphrase,
+    //     readyTimeout: config.timeouts.sshTimeout,
+    //     agent: process.env.SSH_AUTH_SOCK,
+    //     agentForward: true        
+    // }
+    
+    // )
     
     const sshRes = await sshPromise;    
     // clearTimeout(sshTimeout);    
@@ -239,8 +243,18 @@ const testVpnVpc = async ({ id, vpnServer, sshServer, rdpServer, sshKey }) => {
                 score += config.points.downloadOvpn;
                 let vpnStatus = await connectOvpn(ovpnConfigFile, config.vpnUser, id || config.vpnPwd, sudoPrefix, log, logError);
                 score += (config.points.connectOvpn[vpnStatus] || 0);
-                if (vpnStatus == OK) {                
-                    let sshStatus = await connectSsh(sshServer || config.sshServer, config.sshUser, sshKey, config.keyPassphrase, log, logError);
+                if (vpnStatus == OK) {         
+                    let config = {
+                        host: sshServer || config.sshServer,
+                        port: 22,
+                        username: config.sshUser,
+                        privateKey: sshKey,
+                        passphrase: config.keyPassphrase,
+                        readyTimeout: config.timeouts.sshTimeout,
+                        // agent: process.env.SSH_AUTH_SOCK,
+                        // agentForward: true                   
+                    }       
+                    let sshStatus = await connectSsh(config, log, logError);
                     score += (config.points.connectSsh[sshStatus] || 0);
                     let rdpStatus = await connectRdp(rdpServer || config.rdpServer, config.rdpUser, config.rdpPwd, log, logError);
                     score += (config.points.connectRdp[rdpStatus] || 0);
@@ -271,35 +285,24 @@ const analyzeIp = (buffer, lineRegex, expectedMask) => {
     })
 }
 
-const testBastionNetConfig = async (conn, log, logError) => {
-    var ipCmd = "/sbin/ip -4 -br a"
+const sshExec = async (conn, cmd, log, logError, outputAnalysis, header = "") => {
+    // var ipCmd = "/sbin/ip -4 -br a"
     var buffer = "";
-    let ipCmdResolve = null;
-    let ipCmdPromise = new Promise((res) => ipCmdResolve = res);
+    let cmdResolve = null;
+    let cmdPromise = new Promise((res) => cmdResolve = res);
     let res = null;
-    conn.exec(ipCmd, (err, stream) => {
+    conn.exec(cmd, (err, stream) => {
         if (err) {
-            logError("Bastion net mask error: " + err.message);           
-            ipCmdResolve();             
+            logError(header + err.message);           
+            cmdResolve();             
         } else {
             stream.on('data', (data) => {
                 buffer += data.toString();
             })
-            // .on("error", (e) => {
-            //     logError("Bastion ip cmd error: " + e.toString())
-            // })
             .on('close', () => {
                 // log(buffer);
-                var foundLine = analyzeIp(buffer, /172\.16\.8\.\d+\/(?<mask>\d+)/, "26");
-                if (foundLine) {
-                    foundLine = foundLine.split(" ").filter(x => x != "").join(" ");
-                    log("Bastion net: " + foundLine);
-                    res = foundLine;
-                } else {
-                    log("Bastion net: cannot find expected network configuration. Check assignment requirements.");
-                    log(buffer);
-                }
-                ipCmdResolve();
+                res = outputAnalysis(buffer);
+                cmdResolve();
             })
             .stderr.on('data', (data) => {
                 buffer += data.toString();
@@ -307,77 +310,110 @@ const testBastionNetConfig = async (conn, log, logError) => {
         }                    
     });
 
-    await ipCmdPromise;
-    return res;
-}
-
-const testPrivateUbuntuNetConfig = async (conn, sshServer, log, logError) => {
-    var cmd = `ssh -o ConnectTimeout=3 ${config.sshUser}@${(sshServer || config.sshServer)} -f '/sbin/ip -4 -br a'`;
-    let cmdResolve = null;
-    let cmdPromise = new Promise((res) => cmdResolve = res);
-    var buffer = "";
-    let res = "";
-    conn.exec(cmd, (err, stream) => {
-        if (err) {
-            logError("Private Ubuntu error: " + err.message);
-            cmdResolve();
-        } else {
-            stream.on('data', (data) => {
-                buffer += data.toString();
-            }).on('close', () => {
-                if (buffer.startsWith("Permission denied")) {
-                    log("ssh: " + (sshServer || config.sshServer) + " auth failed. Check staff key was added.");
-                    res = AUTH_ERROR;
-                } else if (buffer.includes("Connection timed out")) {
-                    log("ssh: " + (sshServer || config.sshServer) + " timeout. Check ip address correctness.");
-                    res = TIMEOUT;
-                } else {
-                    var foundLine = analyzeIp(buffer, /172\.16\.1[01]\.\d+\/(?<mask>\d+)/, "23");
-                    if (foundLine) {
-                        foundLine = foundLine.split(" ").filter(x => x != "").join(" ");
-                        log("Private Ubuntu net: " + foundLine);
-                        res = IP_OK
-                    } else {
-                        log("Private Ubuntu net: cannot find expected network configuration. Check assignment requirements.");
-                        log(buffer);
-                        res = OK
-                    }
-                }
-                // console.log("Ubuntu Private connect code: " + errCode);
-                cmdResolve();
-            })
-            .stderr.on('data', (data) => {
-                buffer += data.toString();
-            })            
-        }
-    });
     await cmdPromise;
     return res;
 }
 
-const addKeyToAgent = async () => {
-    try {
-        let keyResolve = null;
-        let keyPromise = new Promise((res) => keyResolve = res);
-        exec("ssh-add " + config.sshKey, (error) => {
-            keyResolve();
-        });
-        await keyPromise;
-    } catch (e) {
-        
-    }
+const ipCmd = "/sbin/ip -4 -br a"
+
+const testPrivateUbuntu = async (conn, sshServer, sshKey, log, logError) => {
+    sshServer = sshServer || config.sshServer;    
+    let fwdResolve = null;
+    let fwdPromise = new Promise((res) => fwdResolve = res);
+    let res = "";
+    // var cmd = `ssh -o ConnectTimeout=3 ${config.sshUser}@${sshServer} -f '/sbin/ip -4 -br a'`;
+    // var res = await sshExec(conn, cmd, log, logError, (buffer) => {
+    //     if (buffer.startsWith("Permission denied")) {
+    //         log("ssh: " + (sshServer || config.sshServer) + " auth failed. Check staff key was added.");
+    //         res = AUTH_ERROR;
+    //     } else if (buffer.includes("Connection timed out")) {
+    //         log("ssh: " + (sshServer || config.sshServer) + " timeout. Check ip address correctness.");
+    //         res = TIMEOUT;
+    //     } else {
+    //         var foundLine = analyzeIp(buffer, /172\.16\.1[01]\.\d+\/(?<mask>\d+)/, "23");
+    //         if (foundLine) {
+    //             foundLine = foundLine.split(" ").filter(x => x != "").join(" ");
+    //             log("Private Ubuntu net: " + foundLine);
+    //             return foundLine;
+    //         } else {
+    //             log("Private Ubuntu net: cannot find expected network configuration. Check assignment requirements.");
+    //             log(buffer);
+    //         }
+    //         return null;
+    //     }
+    // }, "Private Ubuntu: ");
+    // return res;
+
+    conn.forwardOut('127.0.0.1', 0, sshServer, 22, async (err, stream) => {
+        if (err) {
+            log("Cannot forward: " + err);
+            fwdResolve();
+            return;
+        }
+        let privateConfig = {
+            sock: stream,
+            host: sshServer,
+            username: config.sshUser,
+            privateKey: sshKey,
+            passphrase: config.keyPassphrase,
+            readyTimeout: config.timeouts.sshTimeout,
+            // agent: process.env.SSH_AUTH_SOCK,
+            // agentForward: true                   
+        }  
+        let privateSsh = await connectSsh(privateConfig, log, logError, async (conn2) => {
+            let foundLine = await sshExec(conn2, ipCmd, log, logError, (buffer) => {
+                var foundLine = analyzeIp(buffer, /172\.16\.1[01]\.\d+\/(?<mask>\d+)/, "23");
+                if (foundLine) {
+                    foundLine = foundLine.split(" ").filter(x => x != "").join(" ");
+                    log("Private Ubuntu net: " + foundLine);
+                    return foundLine;
+                } else {
+                    log("Private Ubuntu net: cannot find expected network configuration. Check assignment requirements.");
+                    log(buffer);
+                }
+                return null;
+            }, "Private Ubuntu net: ")
+            if (foundLine) return IP_OK;
+            return OK;
+        })
+        res = privateSsh;
+        fwdResolve();
+    })
+
+    await fwdPromise;
+    return res;
 }
 
 const testVpc = async ({ bastionServer, sshServer, sshKey }) => {
     let score = config.points.vpc.base;  
     let res = await withLog(async (log, logError) => {
-        try {                 
-            await addKeyToAgent();   
-            let sshStatus = await connectSsh(bastionServer || config.bastionServer, config.bastionUser, sshKey, config.keyPassphrase, log, logError, cb = async (conn) => {                
+        try {              
+            let bastionConfig = {
+                host: bastionServer || config.bastionServer,
+                port: 22,
+                username: config.bastionUser,
+                privateKey: sshKey,
+                passphrase: config.keyPassphrase,
+                readyTimeout: config.timeouts.sshTimeout
+                // agent: process.env.SSH_AUTH_SOCK,
+                // agentForward: true    
+            }                  
+            let sshStatus = await connectSsh(bastionConfig, log, logError, cb = async (conn) => {                
                 //connect is ok - check ip addr of Bastion 
-                let foundLine = await testBastionNetConfig(conn, log, logError);
+                let foundLine = await sshExec(conn, ipCmd, log, logError, (buffer) => {
+                    var foundLine = analyzeIp(buffer, /172\.16\.8\.\d+\/(?<mask>\d+)/, "26");
+                    if (foundLine) {
+                        foundLine = foundLine.split(" ").filter(x => x != "").join(" ");
+                        log("Bastion net: " + foundLine);
+                        return foundLine;
+                    } else {
+                        log("Bastion net: cannot find expected network configuration. Check assignment requirements.");
+                        log(buffer);
+                    }    
+                    return null;
+                }, "Bastion net: ");
                 if (foundLine) score += config.points.vpc.bastionNetConfig;
-                var status = await testPrivateUbuntuNetConfig(conn, sshServer, log, logError);
+                var status = await testPrivateUbuntu(conn, sshServer, sshKey, log, logError);
                 score += (config.points.vpc.privateHost[status] || 0);
             })
             score += (config.points.vpc.bastionConnect[sshStatus] || 0);
