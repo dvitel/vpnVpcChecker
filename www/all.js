@@ -19,9 +19,9 @@ document.getElementById("testingForm").addEventListener("submit", async function
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(data)
-        })
-        console.log("Resp: ", resp);
+        })        
         let json = await resp.json();
+        console.log("Resp: ", json);
         let { score, log, fields } = json;
         if (fields) {
             Object.keys(fields).forEach(fieldId => {
