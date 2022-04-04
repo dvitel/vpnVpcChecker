@@ -9,8 +9,7 @@ document.getElementById("testingForm").addEventListener("submit", async function
     formData.forEach((value, key) => {
         document.getElementById(key).classList.remove("is-invalid")
         data[key] = value;
-    });
-    console.log("Testing: ", data);
+    });    
     document.getElementById("progress").classList.remove("d-none");
     document.getElementById("testAll").disabled = true;
     try {
@@ -21,10 +20,14 @@ document.getElementById("testingForm").addEventListener("submit", async function
             },
             body: JSON.stringify(data)
         })
+        console.log("Resp: ", resp);
         let json = await resp.json();
         let { score, log, fields } = json;
         if (fields) {
-            Object.keys(fields).forEach(fieldId => document.getElementById(fieldId).classList.add("is-invalid"));
+            Object.keys(fields).forEach(fieldId => {
+                let fieldEl = document.getElementById(fieldId);
+                if (fieldEl) fieldEl.classList.add("is-invalid")
+            });
         } else {
             document.getElementById("scoreBlock").classList.remove("d-none");
             if (score != null) document.getElementById("scoreHolder").classList.remove("d-none");
