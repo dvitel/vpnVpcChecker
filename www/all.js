@@ -37,6 +37,8 @@ document.getElementById("testingForm").addEventListener("submit", async function
         document.getElementById("log").value = e.toString();
     }
     document.getElementById("progress").classList.add("d-none");
-    document.getElementById("testAll").disabled = false;
+    setTimeout(() => {
+        document.getElementById("testAll").disabled = false;
+    }, 4000);
     inProgress = false;
 })

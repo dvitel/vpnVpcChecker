@@ -3,7 +3,9 @@ Description=VPC service
 
 [Service]
 User=ubuntu
+Environment=SSH_AUTH_SOCK=/run/user/1000/ssh-agent.socket
 WorkingDirectory=/home/ubuntu/vpc
+ExecStartPre=ssh-add cc.pem
 ExecStart=node index.js --server
 Restart=always
 

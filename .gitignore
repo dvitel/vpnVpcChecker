@@ -3,3 +3,5 @@ node_modules
 stats.json
 students.csv
 *.csv
+vpcStats.json
+vpcVpnStats.json
