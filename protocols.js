@@ -425,6 +425,7 @@ const testVpc = async ({ login = "", bastionServer, sshServer, sshKey, providedB
                 score += (config.points.vpc.privateHost[status] || 0);
             })
             score += (config.points.vpc.bastionConnect[sshStatus] || 0);
+            log(JSON.stringify(providedBastionIps));
             if (!providedBastionIps[bastionServer]) providedBastionIps[bastionServer] = {};
             providedBastionIps[bastionServer][login] = 1;
             if (Object.keys(providedBastionIps).length > 1) { 
