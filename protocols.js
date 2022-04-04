@@ -344,9 +344,16 @@ const testPrivateUbuntu = async (conn, sshServer, sshKey, log, logError) => {
     // }, "Private Ubuntu: ");
     // return res;
 
+    setTimeout(() => {
+        res = TIMEOUT;
+        log("Private Ubuntu: " + sshServer + " " + TIMEOUT);
+        fwdResolve();
+    }, config.timeouts.sshTimeout);
+
     conn.forwardOut('127.0.0.1', 0, sshServer, 22, async (err, stream) => {
         if (err) {
-            log("Cannot forward: " + err);
+            if (!res) log("Cannot forward: " + err);
+            res = err;
             fwdResolve();
             return;
         }
