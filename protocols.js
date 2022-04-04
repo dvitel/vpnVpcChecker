@@ -428,7 +428,7 @@ const testVpc = async ({ login = "", bastionServer, sshServer, sshKey, providedB
             // log(JSON.stringify(providedBastionIps));
             if (!providedBastionIps[bastionServer]) providedBastionIps[bastionServer] = {};
             providedBastionIps[bastionServer][login] = 1;
-            if (Object.keys(providedBastionIps[bastionServer].length > 1) { 
+            if (Object.keys(providedBastionIps[bastionServer]).length > 1) { 
                 log("WARN: several students with same bastion IP " + bastionServer + " - subject for investigation.")
             }
         } catch (e) {
