@@ -26,6 +26,12 @@ function loadStats(statsFile) {
 }
 
 let vpcStats = loadStats(config.vpcStatsFile);
+let providedBastionIps = {};
+Object.keys(vpcStats).forEach(login => 
+    (vpcStats[login].bastions || []).forEach(bastion => {
+        if (!providedBastionIps[bastion]) providedBastionIps[bastion] = {}
+        providedBastionIps[bastion][login] = 1;
+}))
 let vpnVpcStats = loadStats(config.vpnVpcStatsFile);
 let sshKey = fs.readFileSync(config.sshKey);
 
@@ -61,13 +67,14 @@ if (isServerMode) {
         } else {
             // let uNumber = student.ID;
             // if (uNumber.startsWith("U")) uNumber = uNumber.substring(1);
-            let result = await testVpc({id:login, bastionServer, sshServer, sshKey });
-            await criticalSection(async () => {                
+            let result = await testVpc({ login, bastionServer, sshServer, sshKey, providedBastionIps });
+            await criticalSection(async () => {   
                 let timestamp = new Date();
-                if (!vpcStats[student.Login]) vpcStats[student.Login] = { name: student.Student, uid: student.ID };
+                if (!vpcStats[student.Login]) vpcStats[student.Login] = { name: student.Student, uid: student.ID, bastions: [] };
                 let record = vpcStats[student.Login]
                 record.lastScore = result.score; 
                 record.lastScoreTimestamp = timestamp;
+                if (!record.bastions.includes(bastionServer)) record.bastions.push(bastionServer);
                 if (!record.bestScore) {
                     record.bestScore = result.score; 
                     record.bestScoreTimestamp = timestamp;

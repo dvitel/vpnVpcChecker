@@ -391,12 +391,13 @@ const testPrivateUbuntu = async (conn, sshServer, sshKey, log, logError) => {
     return res;
 }
 
-const testVpc = async ({ bastionServer, sshServer, sshKey }) => {
+const testVpc = async ({ login = "", bastionServer, sshServer, sshKey, providedBastionIps = {} }) => {
     let score = config.points.vpc.base;  
+    bastionServer = bastionServer || config.bastionServer;
     let res = await withLog(async (log, logError) => {
         try {              
             let bastionConfig = {
-                host: bastionServer || config.bastionServer,
+                host: bastionServer,
                 port: 22,
                 username: config.bastionUser,
                 privateKey: sshKey,
@@ -424,6 +425,11 @@ const testVpc = async ({ bastionServer, sshServer, sshKey }) => {
                 score += (config.points.vpc.privateHost[status] || 0);
             })
             score += (config.points.vpc.bastionConnect[sshStatus] || 0);
+            if (!providedBastionIps[bastionServer]) providedBastionIps[bastionServer] = {};
+            providedBastionIps[bastionServer][login] = 1;
+            if (Object.keys(providedBastionIps).length > 1) { 
+                log("WARN: several students with same bastion IP " + bastionServer + " - subject for investigation.")
+            }
         } catch (e) {
             logError("Error: " + e.toString());
         }
