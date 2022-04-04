@@ -14,8 +14,6 @@ let students = parse(fs.readFileSync("students.csv"), {
     columns: true, skip_empty_lines: true
 })
 
-exec("ssh-add " + config.sshKey);
-
 function loadStats(statsFile) {
     let stats = {} //object with all student runs in memory 
     try {

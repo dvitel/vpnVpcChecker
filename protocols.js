@@ -355,10 +355,24 @@ const testPrivateUbuntuNetConfig = async (conn, sshServer, log, logError) => {
     return res;
 }
 
+const addKeyToAgent = async () => {
+    try {
+        let keyResolve = null;
+        let keyPromise = new Promise((res) => keyResolve = res);
+        exec("ssh-add " + config.sshKey, (error) => {
+            keyResolve();
+        });
+        await keyPromise;
+    } catch (e) {
+        
+    }
+}
+
 const testVpc = async ({ bastionServer, sshServer, sshKey }) => {
     let score = config.points.vpc.base;  
     let res = await withLog(async (log, logError) => {
-        try {            
+        try {                 
+            await addKeyToAgent();   
             let sshStatus = await connectSsh(bastionServer || config.bastionServer, config.bastionUser, sshKey, config.keyPassphrase, log, logError, cb = async (conn) => {                
                 //connect is ok - check ip addr of Bastion 
                 let foundLine = await testBastionNetConfig(conn, log, logError);
