@@ -25,7 +25,20 @@ Parameters:
 
   USFBucket:
     Type: String
-    Description: Should contain students.csv and cc.pem 
+    Description: Contains students and staff key
+
+  USFStudents:
+    Type: String
+    Description: csv students file in the bucket who can access vpc-tester
+  
+  USFStaffKey:
+    Type: String
+    Description: staff pem file in the bucket
+   
+  USFStaffKeyPwd:
+    NoEcho: true
+    Type: String    
+    Description: staff pem pass phrase
   
 Mappings:
   Region2AMI:
@@ -82,13 +95,13 @@ Resources:
               "/home/ubuntu/vpc": "https://github.com/dvitel/vpnVpcChecker/tarball/master"
             files: 
               "/home/ubuntu/vpc/students.csv": 
-                source: !Sub "https://${USFBucket}.s3.amazonaws.com/s22.csv"
+                source: !Sub "https://${USFBucket}.s3.amazonaws.com/${USFStudents}"
                 group: ubuntu
                 owner: ubuntu
                 mode: '000600'
                 authentication: "S3AccessCreds"
               "/home/ubuntu/vpc/cc.pem": 
-                source: !Sub "https://${USFBucket}.s3.amazonaws.com/cc.pem"
+                source: !Sub "https://${USFBucket}.s3.amazonaws.com/${USFStaffKey}"
                 group: ubuntu
                 owner: ubuntu
                 mode: '000600'
@@ -99,7 +112,7 @@ Resources:
                   Description=VPC tester service
                   [Service]
                   User=ubuntu
-                  Environment=USF_VPC_PP=AWSCloud
+                  Environment=USF_VPC_PP=${USFStaffKeyPwd}
                   WorkingDirectory=/home/ubuntu/vpc
                   ExecStart=node index.js --server
                   Restart=always
