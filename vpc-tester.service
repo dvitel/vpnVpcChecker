@@ -3,6 +3,7 @@ Description=VPC service
 
 [Service]
 User=ubuntu
+Environment=USF_VPC_PP=AWSCloud
 WorkingDirectory=/home/ubuntu/vpc
 ExecStart=node index.js --server
 Restart=always

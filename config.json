@@ -8,7 +8,6 @@
     "sshServer": "172.16.10.91",
     "sshUser": "ubuntu",
     "sshKey": "./cc.pem",
-    "keyPassphrase": "",
     "rdpServer": "10.0.0.2",
     "rdpUser": "Administrator",
     "rdpPwd": "CloudComputing",

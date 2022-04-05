@@ -130,19 +130,6 @@ const connectSsh = async (config, log, logError, cb = null) => {
         sshResolve(status); //All configured authentication methods failed //Timed out while waiting for handshake
     })
     .connect(config);
-        
-    //     {
-    //     host: sshServer,
-    //     port: 22,
-    //     username: sshUser,
-    //     privateKey: sshKey,
-    //     passphrase: keyPassphrase,
-    //     readyTimeout: config.timeouts.sshTimeout,
-    //     agent: process.env.SSH_AUTH_SOCK,
-    //     agentForward: true        
-    // }
-    
-    // )
     
     const sshRes = await sshPromise;    
     // clearTimeout(sshTimeout);    
@@ -249,7 +236,7 @@ const testVpnVpc = async ({ id, vpnServer, sshServer, rdpServer, sshKey }) => {
                         port: 22,
                         username: config.sshUser,
                         privateKey: sshKey,
-                        passphrase: config.keyPassphrase,
+                        passphrase: process.env.USF_VPC_PP,
                         readyTimeout: config.timeouts.sshTimeout,
                         // agent: process.env.SSH_AUTH_SOCK,
                         // agentForward: true                   
@@ -362,7 +349,7 @@ const testPrivateUbuntu = async (conn, sshServer, sshKey, log, logError) => {
             host: sshServer,
             username: config.sshUser,
             privateKey: sshKey,
-            passphrase: config.keyPassphrase,
+            passphrase: process.env.USF_VPC_PP,
             readyTimeout: config.timeouts.sshTimeout,
             // agent: process.env.SSH_AUTH_SOCK,
             // agentForward: true                   
@@ -401,7 +388,7 @@ const testVpc = async ({ login = "", bastionServer, sshServer, sshKey, providedB
                 port: 22,
                 username: config.bastionUser,
                 privateKey: sshKey,
-                passphrase: config.keyPassphrase,
+                passphrase: process.env.USF_VPC_PP,
                 readyTimeout: config.timeouts.sshTimeout
                 // agent: process.env.SSH_AUTH_SOCK,
                 // agentForward: true    
