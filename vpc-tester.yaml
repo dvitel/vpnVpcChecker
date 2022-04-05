@@ -2,6 +2,15 @@
 Description: Setup of VPC tester as EC2 instance
 
 Parameters:
+  InstanceTypeParameter:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+    Description: Select instance size.
+
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of an existing EC2 keypair to enable SSH access to the instance
@@ -195,7 +204,7 @@ Resources:
     Properties:
       IamInstanceProfile: !Ref VPCTesterInstanceProfile
       ImageId: !FindInMap [Region2AMI, !Ref 'AWS::Region', 'AMI']
-      InstanceType: t2.micro
+      InstanceType: !Ref InstanceTypeParameter
       SecurityGroups:
       - !Ref VPCTesterSecurityGroup
       Tags:
@@ -227,69 +236,44 @@ Resources:
         FromPort: 22
         ToPort: 22
         IpProtocol: tcp
-  # VPCTesterGateway: 
-  #   Type: AWS::ApiGatewayV2::Api
-  #   Properties: 
-  #     Body: !Sub |
-  #       {
-  #         "openapi" : "3.0.1",
-  #         "info" : {
-  #           "title" : "vpc-tester",
-  #           "version" : "2022-04-05 04:37:36UTC"
-  #         },
-  #         "servers" : [ {
-  #           "url" : "https://ur489fn8we.execute-api.us-east-1.amazonaws.com/{basePath}",
-  #           "variables" : {
-  #             "basePath" : {
-  #               "default" : ""
-  #             }
-  #           }
-  #         } ],
-  #         "paths" : {
-  #           "/{proxy+}" : {
-  #             "parameters" : [ {
-  #               "name" : "proxy+",
-  #               "in" : "path",
-  #               "description" : "Generated path parameter for proxy+",
-  #               "required" : true,
-  #               "schema" : {
-  #                 "type" : "string"
-  #               }
-  #             } ],
-  #             "x-amazon-apigateway-any-method" : {
-  #               "responses" : {
-  #                 "default" : {
-  #                   "description" : "Default response for ANY /{proxy+}"
-  #                 }
-  #               },
-  #               "x-amazon-apigateway-integration" : {
-  #                 "requestParameters" : {
-  #                   "overwrite:path" : "$request.path"
-  #                 },
-  #                 "payloadFormatVersion" : "1.0",
-  #                 "type" : "http_proxy",
-  #                 "httpMethod" : "ANY",
-  #                 "uri" : "http://50.19.189.113:3001",
-  #                 "connectionType" : "INTERNET"
-  #               }
-  #             }
-  #           }
-  #         },
-  #         "x-amazon-apigateway-importexport-version" : "1.0"
-  #       }
-  #     Description: usf-vpc-tester gateway
-  #     DisableExecuteApiEndpoint: Boolean
-  #     DisableSchemaValidation: Boolean
-  #     FailOnWarnings: Boolean
-  #     Name: String
-  #     ProtocolType: String
-  #     RouteKey: String
-  #     RouteSelectionExpression: String
-  #     Tags: Json
-  #     Target: String
-  #     Version: String  
+  VPCTesterGateway: 
+    Type: AWS::ApiGatewayV2::Api
+    Properties: 
+      Body:
+        openapi: "3.0.1"
+        paths:
+          "/{proxy+}" :
+            parameters: 
+              - name: "proxy+"
+                in: "path"
+                description: "Generated path parameter for proxy+"
+                required: true
+                schema:
+                  type: string
+            x-amazon-apigateway-any-method:
+              responses:
+                default:
+                  description: "Default response for ANY /{proxy+}"
+              x-amazon-apigateway-integration:
+                requestParameters:
+                  "overwrite:path": "$request.path"
+                payloadFormatVersion: "1.0"
+                type: "http_proxy"
+                httpMethod: "ANY"
+                uri: !Sub "http://${VPCTesterInstance.PublicIp}:3001"
+                connectionType: "INTERNET"
+    DependsOn: VPCTesterInstance
+  VPCTesterGatewayStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties: 
+      ApiId: !Ref VPCTesterGateway
+      AutoDeploy: true
+      StageName: $default
         
 Outputs:
-  WebURL:
-    Description: The URL for the web page.
+  InternalURL:
+    Description: usf vpc internal http endpoint
     Value: !Sub 'http://${VPCTesterInstance.PublicIp}:3001'
+  URL:
+    Description: gateway https endpoint
+    Value: !Sub ${VPCTesterGateway.ApiEndpoint}
