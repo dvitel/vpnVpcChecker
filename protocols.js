@@ -29,6 +29,18 @@ const downloadOvpn = async (vpnServer, vpnUser, vpnPwd, log, logError) => {
     const browser = await p.launch({ headless: !gui, ignoreHTTPSErrors: true });    
     try {
         const page = await browser.newPage();
+        //capturing name of ovpn file
+        page.on('response', response => {            
+            const contentType = response.headers()['content-type'];
+            if (contentType == "application/x-openvpn-profile") {
+                const contentDisposition = response.headers()['content-disposition'];
+                if (!contentDisposition) return;
+                const fileName = contentDisposition.split("=")[1] || null;
+                if (!fileName) return;
+                ovpnConfig = path.join(__dirname, fileName)
+                // handle and rename file name (after making sure it's downloaded)
+            }
+        });
         page.setDefaultTimeout(config.timeouts.ovpnDownload);        
         await page.goto(url, { waitUntil: 'networkidle2' });
         await Promise.all([page.waitForSelector("#username", { visible: true }), page.waitForSelector("#password", { visible: true })])
@@ -36,7 +48,7 @@ const downloadOvpn = async (vpnServer, vpnUser, vpnPwd, log, logError) => {
         await page.type("#username", vpnUser);
         await page.type("#password", vpnPwd);
         await page.click("#go");
-        await page.waitForSelector("#profiles", { visible: true });
+        await page.waitForSelector("#profiles, #select-profile", { visible: true });
         auth = true;
         await page._client.send('Page.setDownloadBehavior', {
             behavior: 'allow',
@@ -44,7 +56,7 @@ const downloadOvpn = async (vpnServer, vpnUser, vpnPwd, log, logError) => {
         });    
         //assume that jquery is already on page - checked on 12/01/2021 - use addScriptTag otherwise to add jquery
         const link = await page.evaluateHandle(() => {
-            return $('a:contains(Yourself):first')[0];
+            return $('a:contains(Yourself):first, button:contains(Yourself):first')[0];
         });        
         // let ovpnResolved = null;
         // let ovpnPromise = new Promise((res) => ovpnResolved = res);
@@ -55,6 +67,7 @@ const downloadOvpn = async (vpnServer, vpnUser, vpnPwd, log, logError) => {
         //         log(r, r.request())
         //     }
         // });
+                
         await link.click()
         // ovpnConfig = await ovpnPromise;
         // clearTimeout(ovpnTimeout);
@@ -231,7 +244,7 @@ const testVpnVpc = async ({ id, vpnServer, sshServer, rdpServer, sshKey }) => {
                 let vpnStatus = await connectOvpn(ovpnConfigFile, config.vpnUser, id || config.vpnPwd, sudoPrefix, log, logError);
                 score += (config.points.connectOvpn[vpnStatus] || 0);
                 if (vpnStatus == OK) {         
-                    let config = {
+                    let c = {
                         host: sshServer || config.sshServer,
                         port: 22,
                         username: config.sshUser,
@@ -241,7 +254,7 @@ const testVpnVpc = async ({ id, vpnServer, sshServer, rdpServer, sshKey }) => {
                         // agent: process.env.SSH_AUTH_SOCK,
                         // agentForward: true                   
                     }       
-                    let sshStatus = await connectSsh(config, log, logError);
+                    let sshStatus = await connectSsh(c, log, logError);
                     score += (config.points.connectSsh[sshStatus] || 0);
                     let rdpStatus = await connectRdp(rdpServer || config.rdpServer, config.rdpUser, config.rdpPwd, log, logError);
                     score += (config.points.connectRdp[rdpStatus] || 0);
