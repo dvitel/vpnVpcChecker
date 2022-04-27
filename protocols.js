@@ -344,7 +344,7 @@ const testPrivateUbuntu = async (conn, sshServer, sshKey, log, logError) => {
     // }, "Private Ubuntu: ");
     // return res;
 
-    setTimeout(() => {
+    const timeoutObj = setTimeout(() => {
         res = TIMEOUT;
         log("Private Ubuntu: " + sshServer + " " + TIMEOUT);
         fwdResolve();
@@ -388,6 +388,7 @@ const testPrivateUbuntu = async (conn, sshServer, sshKey, log, logError) => {
     })
 
     await fwdPromise;
+    clearTimeout(timeoutObj);
     return res;
 }
 
