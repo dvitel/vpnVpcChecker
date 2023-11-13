@@ -26,7 +26,16 @@ Scores and tries are logged. Best score could be used for assignment grading.
 
 ![Tester web UI](./vpn-vpc-webui.png)
 
-## Testing server setup 
+## CloudFormation template to create tester instance 
+
+The *vpc-tester.yaml* is the template to create the instance of tester with CloudFormation stack.
+It requires set of parameters to be specified. For instance, the bucket name under same account is required.
+This bucket should contain the csv file with students in format specified bellow. 
+Also it should contain staff key to be installed on the instance. 
+Provided in the bucket information will be downloaded to the instance at initialization.
+
+
+## Manual testing server setup 
 
 Environment init 
 
